@@ -1,69 +1,51 @@
 /* @flow */
 
-import { config } from '../config';
-import { getLocalStorage, setLocalStorage, uniqueID } from './util';
+import { ZalgoPromise } from "@krakenjs/zalgo-promise/src";
+import {
+  getSessionID as getSDKSessionID,
+  getStorageState,
+  getSessionState,
+} from "@paypal/sdk-client/src";
 
-const SESSION_KEY = '__pp_session__';
+export type StateGetSet = {|
+  // eslint-disable-next-line no-undef
+  get: <T>(string) => ZalgoPromise<T>,
+  // eslint-disable-next-line no-undef
+  set: <T>(string, T) => ZalgoPromise<T>,
+|};
 
-type SessionType = {
-    guid : string,
-    state : Object,
-    created : number
+export function getSessionID(): string {
+  if (window.xprops && window.xprops.sessionID) {
+    return window.xprops.sessionID;
+  }
+
+  return getSDKSessionID();
+}
+
+export const storageState: StateGetSet = {
+  get: <T>(key: string): ZalgoPromise<T> => {
+    return getStorageState((state) => {
+      return ZalgoPromise.resolve(state[key]);
+    });
+  },
+  set: <T>(key: string, value: T): ZalgoPromise<T> => {
+    return getStorageState((state) => {
+      state[key] = value;
+      return ZalgoPromise.resolve(value);
+    });
+  },
 };
 
-function readRawSession() : SessionType {
-    return getLocalStorage(SESSION_KEY);
-}
-
-function saveRawSession(session) {
-    setLocalStorage(SESSION_KEY, session);
-}
-
-function getSession() : Object {
-
-    let session = readRawSession();
-    let now = Date.now();
-
-    if (session) {
-
-        if ((now - session.created) > config.session_uid_lifetime) {
-            session.guid = uniqueID();
-        }
-
-        if (!session.state) {
-            session.state = {};
-        }
-
-    } else {
-
-        session = {
-            guid: uniqueID(),
-            state: {},
-            created: now
-        };
-    }
-
-    saveRawSession(session);
-
-    return session;
-}
-
-export function getSessionState<T>(handler : (state : Object) => T) : T {
-    let session = getSession();
-    let result = handler(session.state);
-    saveRawSession(session);
-    return result;
-}
-
-export function getSessionID() : string {
-    return getSession().guid;
-}
-
-export function getCommonSessionID() : string {
-
-    if (window.xprops && window.xprops.uid) {
-        return window.xprops.uid;
-    }
-
-    return getSessionID();
-}
+export const sessionState: StateGetSet = {
+  get: <T>(key: string): ZalgoPromise<T> => {
+    return getSessionState((state) => {
+      return ZalgoPromise.resolve(state[key]);
+    });
+  },
+  set: <T>(key: string, value: T): ZalgoPromise<T> => {
+    return getSessionState((state) => {
+      state[key] = value;
+      return ZalgoPromise.resolve(value);
+    });
+  },
+};

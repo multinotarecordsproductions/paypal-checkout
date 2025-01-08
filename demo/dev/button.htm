@@ -1,32 +1,60 @@
 <!DOCTYPE html>
 
 <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="../../dist/checkout.js" data-paypal-checkout data-env="demo"></script>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://localhost.paypal.com:9001/sdk.js?client-id=alc_client1"></script>
+  <script src="https://localhost.paypal.com:9001/button.js"></script>
+  <script src="https://localhost.paypal.com:9001/jsx-pragmatic.js"></script>
 </head>
 
 <body>
-    <button id="paypal-button-popup">popup</button>
-    <button id="paypal-button-iframe">iframe</button>
+  <script>
+    const server = xprops.server || {};
 
-    <script>
-        function renderCheckout() {
-            paypal.Checkout.renderTo(window.top, {
-                env: window.xprops.env,
-                payment: window.xprops.payment,
-                onAuthorize: window.xprops.onAuthorize
-            });
-        }
+    const props = {
+      ...xprops,
+      content: {
+        payWithDebitOrCreditCard: "Debit or Credit Card",
+        payNow: "Pay Now",
+        payWith: "Pay with",
+        credit: "Credit",
+        balance: "Balance",
+      },
+      wallet: server.wallet,
+    };
 
-        document.querySelector('#paypal-button-popup').addEventListener('click', function() {
-            paypal.Checkout.contexts.iframe = false;
-            renderCheckout();
+    document.write(button.Buttons(props).render(jsx.html()));
+
+    document.querySelectorAll("[data-funding-source]").forEach((button) => {
+      if (button.parentElement.querySelector("[data-menu]")) {
+        button.parentElement
+          .querySelector("[data-menu]")
+          .addEventListener("click", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+
+            alert("menu triggered");
+          });
+      }
+
+      button.addEventListener("click", () => {
+        const instance = paypal.Checkout({
+          createOrder: () => {
+            return "EC-XXXXXXXXXX";
+          },
+          onApprove: () => {
+            console.log("Approved");
+            instance.close();
+          },
+          onCancel: () => {
+            console.log("Cancelled");
+            instance.close();
+          },
         });
 
-        document.querySelector('#paypal-button-iframe').addEventListener('click', function() {
-            paypal.Checkout.contexts.iframe = true;
-            renderCheckout();
-        });
-    </script>
+        instance.renderTo(window.parent, "body");
+      });
+    });
+  </script>
 </body>
